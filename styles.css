@@ -1,0 +1,51 @@
+body {
+    margin: 0;
+    overflow: hidden;
+    background-color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    position: relative;
+}
+
+canvas {
+    display: block;
+    width: 412px;
+    height: 915px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1;
+    background-color: #005f81cb;
+}
+
+#overlay {
+    position: absolute;
+    width: 412px;
+    height: 915px;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: #003a4f;
+    color: white;
+    font-family: sans-serif;
+    font-size: 20px;
+    text-align: center;
+    pointer-events: auto;
+    z-index: 2;
+}
+
+.button {
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    margin-top: 20px;
+    z-index: 3;
+}

@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=412, initial-scale=1.0">
+    <title>Rocket Game</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #0a0a23;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            position: relative;
+        }
+
+        #overlay {
+            position: absolute;
+            width: 412px;
+            height: 915px;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: linear-gradient(180deg, rgba(10, 10, 35, 0.9), rgba(0, 0, 20, 0.95));
+            color: white;
+            font-family: 'Orbitron', sans-serif;
+            text-align: center;
+            pointer-events: auto;
+            z-index: 2;
+            border: 2px solid rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+        }
+
+        #start-screen {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #start-screen h1 {
+            font-size: 48px;
+            background: linear-gradient(45deg, #00ffcc, #ff00ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            margin: 10px 0;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        #start-screen h1:nth-child(2) {
+            font-size: 14px;
+            background: none;
+            color: #d0d0e0;
+            text-shadow: none;
+            max-width: 350px;
+            line-height: 1.5;
+            animation: none;
+        }
+
+        #start-screen img {
+            width: 150px;
+            height: auto;
+            margin: 20px 0;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        .button {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            padding: 12px 50px;
+            margin-top: 20px;
+            cursor: pointer;
+            background: linear-gradient(45deg, #00ffcc, #ff00ff);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            transition: transform 0.3s, box-shadow 0.3s;
+            pointer-events: auto;
+        }
+
+        .button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.8);
+        }
+
+        .button:active {
+            transform: scale(0.95);
+        }
+
+        #end-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #end-screen h2 {
+            font-size: 36px;
+            color: #ff4444;
+            text-shadow: 0 0 10px rgba(255, 0, 0, 0.5);
+            margin: 10px 0;
+        }
+
+        #end-screen h2:nth-child(2) {
+            font-size: 14px;
+            color: #d0d0e0;
+            max-width: 350px;
+            line-height: 1.5;
+        }
+
+        #end-screen p {
+            font-size: 20px;
+            color: #00ffcc;
+            margin: 20px 0;
+        }
+
+        #success-screen {
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+
+        #success-screen h2 {
+            font-size: 36px;
+            background: linear-gradient(45deg, #00ffcc, #ff00ff);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.5);
+            margin: 10px 0;
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        #success-screen h2:nth-child(2) {
+            font-size: 14px;
+            background: none;
+            color: #d0d0e0;
+            text-shadow: none;
+            max-width: 350px;
+            line-height: 1.5;
+            animation: none;
+        }
+
+        #success-screen p {
+            font-size: 20px;
+            color: #00ffcc;
+            margin: 20px 0;
+        }
+
+        @keyframes glow {
+            0% {
+                text-shadow: 0 0 10px rgba(0, 255, 255, 0.5), 0 0 20px rgba(0, 255, 255, 0.3);
+            }
+            100% {
+                text-shadow: 0 0 20px rgba(0, 255, 255, 0.8), 0 0 30px rgba(0, 255, 255, 0.5);
+            }
+        }
+
+        @keyframes float {
+            0% {
+                transform: translateY(0);
+            }
+            50% {
+                transform: translateY(-15px);
+            }
+            100% {
+                transform: translateY(0);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="overlay">
+        <div id="start-screen">
+            <h1>ROCKET</h1>
+            <h1>Далеке майбутнє. Людство вирушає до зірок у пошуках нового дому. Ви – пілот експериментального корабля Rocket, останньої надії колоністів. Попереду – небезпечні астероїдні пояси, невідомі загрози та безмежний космос. Чи зможете ви прокласти шлях крізь хаос і віднайти новий світ?</h1>
+            <img src="img/Rocket.png" alt="Rocket">
+            <button class="button" id="startButton">Start</button>
+        </div>
+        <div id="end-screen">
+            <h2>Game Over</h2>
+            <h2>Місія провалена… Ваш корабель розбитий, а сигнал SOS зникає в безмежному космосі. Чи був шанс на порятунок? Можливо, наступного разу ви зможете дістатися далі…</h2>
+            <p>Total score: <span id="finalScore">0</span></p>
+            <button class="button" id="restartButton">Restart</button>
+        </div>
+        <div id="success-screen">
+            <h2>Mission Complete</h2>
+            <h2>Вітаємо, пілоте! Ви успішно завершили місію та досягли нової планети. Ваш подвиг увійде в історію людства як перший крок до нового дому серед зірок!</h2>
+            <p>Total score: <span id="successScore">0</span></p>
+            <button class="button" id="successRestartButton">Restart</button>
+        </div>
+    </div>
+    <canvas id="gameCanvas"></canvas>
+    <script src="script.js"></script>
+</body>
+</html>
