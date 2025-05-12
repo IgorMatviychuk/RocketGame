@@ -2,10 +2,9 @@
 <html lang="uk">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=412, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Rocket Game</title>
     <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="styles.css">
     <style>
         body {
             margin: 0;
@@ -18,10 +17,18 @@
             position: relative;
         }
 
+        canvas {
+            display: block;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            background-color: #005f81cb;
+        }
+
         #overlay {
             position: absolute;
-            width: 412px;
-            height: 915px;
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
@@ -33,18 +40,21 @@
             color: white;
             font-family: 'Orbitron', sans-serif;
             text-align: center;
-            pointer-events: auto;
             z-index: 2;
             border: 2px solid rgba(255, 255, 255, 0.1);
             border-radius: 15px;
             box-shadow: 0 0 20px rgba(0, 255, 255, 0.2);
+            pointer-events: none;
         }
 
-        #start-screen {
+        #start-screen,
+        #end-screen,
+        #success-screen {
             display: flex;
             flex-direction: column;
             align-items: center;
             padding: 20px;
+            pointer-events: auto;
         }
 
         #start-screen h1 {
@@ -75,35 +85,8 @@
             animation: float 3s ease-in-out infinite;
         }
 
-        .button {
-            font-family: 'Orbitron', sans-serif;
-            font-size: 24px;
-            padding: 12px 50px;
-            margin-top: 20px;
-            cursor: pointer;
-            background: linear-gradient(45deg, #00ffcc, #ff00ff);
-            color: white;
-            border: none;
-            border-radius: 25px;
-            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
-            transition: transform 0.3s, box-shadow 0.3s;
-            pointer-events: auto;
-        }
-
-        .button:hover {
-            transform: scale(1.1);
-            box-shadow: 0 0 25px rgba(0, 255, 255, 0.8);
-        }
-
-        .button:active {
-            transform: scale(0.95);
-        }
-
         #end-screen {
             display: none;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
         }
 
         #end-screen h2 {
@@ -128,9 +111,6 @@
 
         #success-screen {
             display: none;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
         }
 
         #success-screen h2 {
@@ -158,6 +138,31 @@
             font-size: 20px;
             color: #00ffcc;
             margin: 20px 0;
+        }
+
+        .button {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 24px;
+            padding: 12px 50px;
+            margin-top: 20px;
+            cursor: pointer;
+            background: linear-gradient(45deg, #00ffcc, #ff00ff);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            box-shadow: 0 0 15px rgba(0, 255, 255, 0.5);
+            transition: transform 0.3s, box-shadow 0.3s;
+            pointer-events: auto;
+            z-index: 3;
+        }
+
+        .button:hover {
+            transform: scale(1.1);
+            box-shadow: 0 0 25px rgba(0, 255, 255, 0.8);
+        }
+
+        .button:active {
+            transform: scale(0.95);
         }
 
         @keyframes glow {

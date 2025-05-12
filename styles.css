@@ -39,6 +39,11 @@ canvas {
     text-align: center;
     pointer-events: auto;
     z-index: 2;
+    pointer-events: none; /* Вимикаємо pointer-events для overlay */
+}
+
+#start-screen, #end-screen, #success-screen {
+    pointer-events: auto; /* Увімкнено тільки для екранів */
 }
 
 .button {
