@@ -1,16 +1,12 @@
 document.addEventListener("DOMContentLoaded", () => {
     const canvas = document.getElementById('gameCanvas');
-    if (!canvas) {
-        console.error("Canvas element not found!");
-        return;
-    }
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-        console.error("Failed to get 2D context for canvas!");
+    const ctx = canvas.getContext('2d', { alpha: false });
+    if (!canvas || !ctx) {
+        console.error("Canvas or context not initialized!");
         return;
     }
 
-    // Ініціалізація змінних на початку
+    // Ініціалізація змінних
     let rocket = { x: canvas.width / 2 - 40, y: canvas.height - 100, width: 80, height: 100 };
     let planet = { x: canvas.width / 2 - 100, y: canvas.height - 200, width: 200, height: 200, visible: true };
     let planet2 = { x: canvas.width / 2 - 100, y: canvas.height, width: 200, height: 200, visible: false };
@@ -26,15 +22,15 @@ document.addEventListener("DOMContentLoaded", () => {
     let scoreScale = 1;
     let scoreScaleTimer = 0;
     let flameParticles = [];
-    let flameSparks = [];
     let asteroidTrails = [];
-    let asteroidSparks = [];
     let scaleFactor = 1;
+    let lastTime = performance.now();
+    let departureFrameCount = 0;
 
+    // Спрощений фон
     let backgroundLayers = [
         { stars: [], speed: 0.5, radius: 1, brightness: 0.3 },
-        { stars: [], speed: 1, radius: 1.5, brightness: 0.5 },
-        { stars: [], speed: 2, radius: 2, brightness: 0.8 }
+        { stars: [], speed: 1, radius: 1.5, brightness: 0.5 }
     ];
 
     const rocketImage = new Image();
@@ -43,7 +39,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const planetImage = new Image();
     const planet2Image = new Image();
     const healPointImage = new Image();
-
     let imagesLoaded = 0;
     const totalImages = 6;
 
@@ -53,7 +48,7 @@ document.addEventListener("DOMContentLoaded", () => {
     backgroundSound.loop = true;
     backgroundSound.volume = 0.03;
 
-    // Адаптивний розмір канвасу та оверлею
+    // Адаптивний розмір канвасу
     function resizeCanvas() {
         const aspectRatio = 412 / 915;
         const windowWidth = window.innerWidth;
@@ -71,18 +66,15 @@ document.addEventListener("DOMContentLoaded", () => {
         canvas.width = newWidth;
         canvas.height = newHeight;
 
-        // Оновлюємо розміри #overlay
         const overlay = document.getElementById('overlay');
         if (overlay) {
             overlay.style.width = `${newWidth}px`;
             overlay.style.height = `${newHeight}px`;
-        } else {
-            console.error("Overlay element not found!");
         }
 
         scaleFactor = canvas.width / 412;
         updateGameElements();
-        initStars(); // Реініціалізуємо зірки при зміні розміру
+        initStars();
     }
 
     function updateGameElements() {
@@ -104,52 +96,29 @@ document.addEventListener("DOMContentLoaded", () => {
         asteroids.forEach(asteroid => {
             asteroid.width = 40 * scaleFactor;
             asteroid.height = 40 * scaleFactor;
-            // Масштабуємо позиції астероїдів пропорційно новому розміру канвасу
             asteroid.x = (asteroid.x / canvas.width) * canvas.width;
             asteroid.y = (asteroid.y / canvas.height) * canvas.height;
         });
 
-        flameParticles.forEach(particle => {
-            particle.x = (particle.x / canvas.width) * canvas.width;
-            particle.y = (particle.y / canvas.height) * canvas.height;
-            particle.radius = particle.radius * scaleFactor;
-            particle.speedY = particle.speedY * scaleFactor;
+        flameParticles.forEach(p => {
+            p.x = (p.x / canvas.width) * canvas.width;
+            p.y = (p.y / canvas.height) * canvas.height;
+            p.radius = p.radius * scaleFactor;
+            p.speedY = p.speedY * scaleFactor;
         });
 
-        flameSparks.forEach(spark => {
-            spark.x = (spark.x / canvas.width) * canvas.width;
-            spark.y = (spark.y / canvas.height) * canvas.height;
-            spark.radius = spark.radius * scaleFactor;
-            spark.speedX = spark.speedX * scaleFactor;
-            spark.speedY = spark.speedY * scaleFactor;
-        });
-
-        asteroidTrails.forEach(trail => {
-            trail.x = (trail.x / canvas.width) * canvas.width;
-            trail.y = (trail.y / canvas.height) * canvas.height;
-            trail.radius = trail.radius * scaleFactor;
-            trail.speedY = trail.speedY * scaleFactor;
-        });
-
-        asteroidSparks.forEach(spark => {
-            spark.x = (spark.x / canvas.width) * canvas.width;
-            spark.y = (spark.y / canvas.height) * canvas.height;
-            spark.radius = spark.radius * scaleFactor;
-            spark.speedX = spark.speedX * scaleFactor;
-            spark.speedY = spark.speedY * scaleFactor;
+        asteroidTrails.forEach(t => {
+            t.x = (t.x / canvas.width) * canvas.width;
+            t.y = (t.y / canvas.height) * canvas.height;
+            t.radius = t.radius * scaleFactor;
+            t.speedY = t.speedY * scaleFactor;
         });
     }
 
     function onImageLoad() {
-        imagesLoaded++;
-        console.log(`Image loaded: ${imagesLoaded}/${totalImages}`);
-        if (imagesLoaded === totalImages) {
+        if (++imagesLoaded === totalImages) {
             console.log("All images loaded");
         }
-    }
-
-    function onImageError(e) {
-        console.error("Error loading an image:", e.target.src);
     }
 
     rocketImage.src = 'img/Rocket.png';
@@ -166,23 +135,16 @@ document.addEventListener("DOMContentLoaded", () => {
     planet2Image.onload = onImageLoad;
     healPointImage.onload = onImageLoad;
 
-    rocketImage.onerror = onImageError;
-    explosionImage.onerror = onImageError;
-    asteroidImage.onerror = onImageError;
-    planetImage.onerror = onImageError;
-    planet2Image.onerror = onImageError;
-    healPointImage.onerror = onImageError;
-
     function initStars() {
         backgroundLayers.forEach(layer => {
             layer.stars = [];
-            for (let i = 0; i < 50; i++) {
+            for (let i = 0; i < 30; i++) {
                 layer.stars.push({
                     x: Math.random() * canvas.width,
                     y: Math.random() * canvas.height,
                     radius: Math.random() * layer.radius + 0.5,
                     speed: layer.speed,
-                    brightness: Math.random() * layer.brightness + 0.2
+                    brightness: layer.brightness
                 });
             }
         });
@@ -192,11 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.fillStyle = '#0a0a23';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-        const nebulaGradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-        nebulaGradient.addColorStop(0, 'rgba(0, 255, 255, 0.1)');
-        nebulaGradient.addColorStop(0.5, 'rgba(255, 0, 255, 0.05)');
-        nebulaGradient.addColorStop(1, 'rgba(0, 255, 255, 0.1)');
-        ctx.fillStyle = nebulaGradient;
+        ctx.fillStyle = 'rgba(0, 255, 255, 0.1)';
         ctx.fillRect(0, 0, canvas.width, canvas.height);
 
         backgroundLayers.forEach(layer => {
@@ -215,32 +173,23 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function drawFlame(x, y, rocketSpeedY) {
-        for (let i = 0; i < 5; i++) {
-            flameParticles.push({
-                x: x + (Math.random() - 0.5) * 20 * scaleFactor,
-                y: y + rocket.height / 2,
-                radius: (Math.random() * 5 + 2) * scaleFactor,
-                speedY: ((Math.random() * 3 + 2) + (rocketSpeedY || 0)) * scaleFactor,
-                opacity: 1,
-                color: Math.random() > 0.5 ? 'rgba(0, 204, 255, 0.8)' : 'rgba(147, 112, 219, 0.8)'
-            });
-        }
-
-        if (Math.random() < 0.3) {
-            flameSparks.push({
-                x: x + (Math.random() - 0.5) * 20 * scaleFactor,
-                y: y + rocket.height / 2,
-                radius: (Math.random() * 2 + 1) * scaleFactor,
-                speedX: (Math.random() - 0.5) * 4 * scaleFactor,
-                speedY: ((Math.random() * 2 + 1) + (rocketSpeedY || 0)) * scaleFactor,
-                opacity: 1
-            });
+    function drawFlame(x, y, rocketSpeedY, isDepartureStart = false) {
+        let particleCount = isDepartureStart ? 5 : 2;
+        if (flameParticles.length < 20) {
+            for (let i = 0; i < particleCount; i++) {
+                flameParticles.push({
+                    x: x + (Math.random() - 0.5) * 20 * scaleFactor,
+                    y: y + rocket.height / 2,
+                    radius: (Math.random() * 4 + 2) * scaleFactor,
+                    speedY: ((Math.random() * 2 + 2) + (rocketSpeedY || 0)) * scaleFactor,
+                    opacity: 1
+                });
+            }
         }
 
         flameParticles.forEach((particle, index) => {
             particle.y += particle.speedY;
-            particle.opacity -= 0.02;
+            particle.opacity -= 0.03;
             particle.radius *= 0.95;
 
             if (particle.opacity <= 0 || particle.radius <= 0.1) {
@@ -248,60 +197,27 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            const gradient = ctx.createRadialGradient(particle.x, particle.y, 0, particle.x, particle.y, particle.radius);
-            gradient.addColorStop(0, particle.color);
-            gradient.addColorStop(0.5, 'rgba(255, 165, 0, 0.5)');
-            gradient.addColorStop(1, 'rgba(255, 69, 0, 0)');
-
             ctx.beginPath();
             ctx.arc(particle.x, particle.y, particle.radius, 0, Math.PI * 2);
-            ctx.fillStyle = gradient;
-            ctx.globalAlpha = particle.opacity;
-            ctx.fill();
-            ctx.globalAlpha = 1;
-        });
-
-        flameSparks.forEach((spark, index) => {
-            spark.x += spark.speedX;
-            spark.y += spark.speedY;
-            spark.opacity -= 0.03;
-            spark.radius *= 0.9;
-
-            if (spark.opacity <= 0 || spark.radius <= 0.1) {
-                flameSparks.splice(index, 1);
-                return;
-            }
-
-            ctx.beginPath();
-            ctx.arc(spark.x, spark.y, spark.radius, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 255, 255, ' + spark.opacity + ')';
+            ctx.fillStyle = `rgba(0, 204, 255, ${particle.opacity})`;
             ctx.fill();
         });
     }
 
     function drawAsteroidTrail(asteroid) {
-        asteroidTrails.push({
-            x: asteroid.x + asteroid.width / 2,
-            y: asteroid.y,
-            radius: (Math.random() * 3 + 2) * scaleFactor,
-            opacity: 1,
-            speedY: -2 * scaleFactor
-        });
-
-        if (Math.random() < 0.3) {
-            asteroidSparks.push({
+        if (asteroidTrails.length < 20) {
+            asteroidTrails.push({
                 x: asteroid.x + asteroid.width / 2,
                 y: asteroid.y,
-                radius: (Math.random() * 2 + 1) * scaleFactor,
-                speedX: (Math.random() - 0.5) * 3 * scaleFactor,
-                speedY: -1 * scaleFactor,
-                opacity: 1
+                radius: (Math.random() * 2 + 2) * scaleFactor,
+                opacity: 1,
+                speedY: -2 * scaleFactor
             });
         }
 
         asteroidTrails.forEach((trail, index) => {
             trail.y += trail.speedY;
-            trail.opacity -= 0.02;
+            trail.opacity -= 0.03;
             trail.radius *= 0.95;
 
             if (trail.opacity <= 0 || trail.radius <= 0.1) {
@@ -309,33 +225,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            const trailGradient = ctx.createLinearGradient(trail.x - trail.radius, trail.y, trail.x + trail.radius, trail.y);
-            trailGradient.addColorStop(0, 'rgba(0, 255, 255, ' + trail.opacity + ')');
-            trailGradient.addColorStop(0.5, 'rgba(173, 216, 230, ' + trail.opacity / 1.5 + ')');
-            trailGradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
             ctx.beginPath();
             ctx.arc(trail.x, trail.y, trail.radius, 0, Math.PI * 2);
-            ctx.fillStyle = trailGradient;
-            ctx.globalAlpha = trail.opacity;
-            ctx.fill();
-            ctx.globalAlpha = 1;
-        });
-
-        asteroidSparks.forEach((spark, index) => {
-            spark.x += spark.speedX;
-            spark.y += spark.speedY;
-            spark.opacity -= 0.03;
-            spark.radius *= 0.9;
-
-            if (spark.opacity <= 0 || spark.radius <= 0.1) {
-                asteroidSparks.splice(index, 1);
-                return;
-            }
-
-            ctx.beginPath();
-            ctx.arc(spark.x, spark.y, spark.radius, 0, Math.PI * 2);
-            ctx.fillStyle = 'rgba(255, 255, 255, ' + spark.opacity + ')';
+            ctx.fillStyle = `rgba(0, 255, 255, ${trail.opacity})`;
             ctx.fill();
         });
     }
@@ -363,14 +255,13 @@ document.addEventListener("DOMContentLoaded", () => {
             ctx.save();
             ctx.translate(planet2.x + planet2.width / 2, planet2.y + planet2.height / 2);
             ctx.rotate(planetRotation);
-            ctx.drawImage(planet2Image, -planet2.width / 2, -planet2.height / 2, planet2.width, planet2.height);
+            ctx.drawImage(planet2Image, -planet2.width / 2, -planet.height / 2, planet2.width, planet2.height);
             ctx.restore();
         }
     }
 
     function startDeparture() {
         if (!rocketImage.complete || !planetImage.complete) {
-            console.error("Images not loaded yet!");
             setTimeout(startDeparture, 100);
             return;
         }
@@ -386,23 +277,30 @@ document.addEventListener("DOMContentLoaded", () => {
         gameRunning = false;
         departureStarted = true;
         planetRotation = 0;
+        departureFrameCount = 0;
+        lastTime = performance.now();
         animateDeparture();
     }
 
     function animateDeparture() {
         if (!departureStarted) return;
 
+        const now = performance.now();
+        const delta = Math.min(now - lastTime, 33.33);
+        lastTime = now;
+
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawBackground();
         drawPlanet();
 
         if (rocketImage.complete) {
-            drawFlame(rocket.x + rocket.width / 2, rocket.y, -5);
+            drawFlame(rocket.x + rocket.width / 2, rocket.y, -5, departureFrameCount < 30);
             ctx.drawImage(rocketImage, rocket.x, rocket.y, rocket.width, rocket.height);
         }
 
-        rocket.y -= 5 * scaleFactor;
-        planetRotation += 0.01;
+        rocket.y -= 5 * scaleFactor * (delta / 16.67);
+        planetRotation += 0.01 * (delta / 16.67);
+        departureFrameCount++;
 
         if (rocket.y < -rocket.height) {
             departureStarted = false;
@@ -424,11 +322,16 @@ document.addEventListener("DOMContentLoaded", () => {
         rocket.y = 100 * scaleFactor;
         rocket.width = 80 * scaleFactor;
         rocket.height = 100 * scaleFactor;
+        lastTime = performance.now();
         animateArrival();
     }
 
     function animateArrival() {
         if (!arrivalStarted) return;
+
+        const now = performance.now();
+        const delta = Math.min(now - lastTime, 33.33);
+        lastTime = now;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawBackground();
@@ -436,13 +339,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (rocket.y < planet2.y - rocket.height) {
             drawFlame(rocket.x + rocket.width / 2, rocket.y, 1);
-        }
-
-        if (rocket.y < planet2.y && rocketImage.complete) {
             ctx.drawImage(rocketImage, rocket.x, rocket.y, rocket.width, rocket.height);
         }
 
-        rocket.y += 1 * scaleFactor;
+        rocket.y += 1 * scaleFactor * (delta / 16.67);
         if (rocket.y < planet2.y) {
             rocket.width *= 0.995;
             rocket.height *= 0.995;
@@ -450,11 +350,11 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (planet2.y > canvas.height - 400 * scaleFactor) {
-            planet2.y -= 2 * scaleFactor;
-            planet2.width += 0.8 * scaleFactor;
-            planet2.height += 0.8 * scaleFactor;
+            planet2.y -= 2 * scaleFactor * (delta / 16.67);
+            planet2.width += 0.8 * scaleFactor * (delta / 16.67);
+            planet2.height += 0.8 * scaleFactor * (delta / 16.67);
         }
-        planetRotation += 0.005;
+        planetRotation += 0.005 * (delta / 16.67);
 
         if (rocket.y >= planet2.y) {
             arrivalStarted = false;
@@ -480,8 +380,6 @@ document.addEventListener("DOMContentLoaded", () => {
             endScreen.style.display = 'none';
             successScreen.style.display = 'block';
             successScore.textContent = score;
-        } else {
-            console.error("Success screen elements not found!");
         }
     }
 
@@ -492,11 +390,16 @@ document.addEventListener("DOMContentLoaded", () => {
         score = 0;
         healPoints = 3;
         if (animationFrame) cancelAnimationFrame(animationFrame);
+        lastTime = performance.now();
         requestAnimationFrame(updateGame);
     }
 
     function updateGame() {
         if (!gameRunning) return;
+
+        const now = performance.now();
+        const delta = Math.min(now - lastTime, 33.33);
+        lastTime = now;
 
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         drawBackground();
@@ -511,18 +414,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         ctx.save();
         ctx.font = `${25 * scaleFactor}px Orbitron, sans-serif`;
-        const gradient = ctx.createLinearGradient(20 * scaleFactor, 20 * scaleFactor, 100 * scaleFactor, 40 * scaleFactor);
-        gradient.addColorStop(0, '#00ffcc');
-        gradient.addColorStop(1, '#ff00ff');
-        ctx.fillStyle = gradient;
-
-        const glowIntensity = 10 + Math.sin(Date.now() * 0.002) * 5;
-        ctx.shadowBlur = glowIntensity;
-        ctx.shadowColor = 'rgba(0, 255, 255, 0.5)';
+        ctx.fillStyle = '#00ffcc';
 
         if (scoreScaleTimer > 0) {
             scoreScale = 1 + 0.2 * (scoreScaleTimer / 20);
-            scoreScaleTimer--;
+            scoreScaleTimer -= delta / 16.67;
         } else {
             scoreScale = 1;
         }
@@ -532,30 +428,30 @@ document.addEventListener("DOMContentLoaded", () => {
         ctx.fillText(`Score: ${score}`, 0, 0);
         ctx.restore();
 
-        moveAsteroids();
+        moveAsteroids(delta);
 
         if (gameRunning) {
             animationFrame = requestAnimationFrame(updateGame);
         }
     }
 
-    function moveAsteroids() {
-        if (Math.random() < 0.01) {
+    function moveAsteroids(delta) {
+        if (Math.random() < 0.01 * (delta / 16.67)) {
             asteroids.push({
                 x: Math.random() * (canvas.width - 60 * scaleFactor),
                 y: -60 * scaleFactor,
                 width: 40 * scaleFactor,
                 height: 40 * scaleFactor,
                 angle: 0,
-                rotationSpeed: (Math.random() * 0.1) - 0.05,
-                sway: Math.random() * 0.05 + 0.02,
+                rotationSpeed: (Math.random() * 0.05) - 0.025,
+                sway: Math.random() * 0.03 + 0.02,
                 swayDirection: Math.random() > 0.5 ? 1 : -1
             });
         }
 
         asteroids.forEach((asteroid, index) => {
-            asteroid.y += 5 * scaleFactor;
-            asteroid.angle += asteroid.rotationSpeed;
+            asteroid.y += 5 * scaleFactor * (delta / 16.67);
+            asteroid.angle += asteroid.rotationSpeed * (delta / 16.67);
             asteroid.x += Math.sin(asteroid.y * asteroid.sway) * asteroid.swayDirection;
 
             drawAsteroidTrail(asteroid);
@@ -564,29 +460,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 ctx.save();
                 ctx.translate(asteroid.x + asteroid.width / 2, asteroid.y + asteroid.height / 2);
                 ctx.rotate(asteroid.angle);
-
-                const electricLines = 10;
-                for (let i = 0; i < electricLines; i++) {
-                    const angle = (i / electricLines) * Math.PI * 2;
-                    const length = Math.random() * 15 + 10;
-                    const gradient = ctx.createLinearGradient(
-                        Math.cos(angle) * asteroid.width / 2,
-                        Math.sin(angle) * asteroid.width / 2,
-                        Math.cos(angle) * (asteroid.width / 2 + length * scaleFactor),
-                        Math.sin(angle) * (asteroid.width / 2 + length * scaleFactor)
-                    );
-                    gradient.addColorStop(0, 'rgba(0, 255, 255, 1)');
-                    gradient.addColorStop(0.5, 'rgba(173, 216, 230, 0.8)');
-                    gradient.addColorStop(1, 'rgba(255, 255, 255, 0)');
-
-                    ctx.beginPath();
-                    ctx.moveTo(Math.cos(angle) * asteroid.width / 2, Math.sin(angle) * asteroid.width / 2);
-                    ctx.lineTo(Math.cos(angle) * (asteroid.width / 2 + length * scaleFactor), Math.sin(angle) * (asteroid.width / 2 + length * scaleFactor));
-                    ctx.lineWidth = (1.5 + Math.random() * 0.5) * scaleFactor;
-                    ctx.strokeStyle = gradient;
-                    ctx.stroke();
-                }
-
                 ctx.drawImage(asteroidImage, -asteroid.width / 2, -asteroid.height / 2, asteroid.width, asteroid.height);
                 ctx.restore();
             }
@@ -624,8 +497,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             startScreen.style.display = 'none';
                             endScreen.style.display = 'block';
                             finalScore.textContent = score;
-                        } else {
-                            console.error("End screen elements not found!");
                         }
                     }, 500);
                 }
@@ -654,8 +525,6 @@ document.addEventListener("DOMContentLoaded", () => {
             startScreen.style.display = 'none';
             endScreen.style.display = 'block';
             finalScore.textContent = score;
-        } else {
-            console.error("End screen elements not found!");
         }
     }
 
@@ -669,8 +538,6 @@ document.addEventListener("DOMContentLoaded", () => {
             successScreen.style.display = 'none';
             overlay.style.display = 'none';
             startScreen.style.display = 'none';
-        } else {
-            console.error("Restart screen elements not found!");
         }
         canvas.style.display = 'block';
         rocket.y = canvas.height - rocket.height - 20 * scaleFactor;
@@ -687,11 +554,21 @@ document.addEventListener("DOMContentLoaded", () => {
         score = 0;
         asteroids = [];
         flameParticles = [];
-        flameSparks = [];
         asteroidTrails = [];
-        asteroidSparks = [];
         initStars();
+        lastTime = performance.now();
         animateDeparture();
+    }
+
+    function updateBackgroundOnMove(deltaX) {
+        console.log(`Parallax triggered with deltaX: ${deltaX}`);
+        backgroundLayers.forEach(layer => {
+            layer.stars.forEach(star => {
+                star.x -= deltaX * (layer.speed / 10);
+                if (star.x < 0) star.x += canvas.width;
+                if (star.x > canvas.width) star.x -= canvas.width;
+            });
+        });
     }
 
     // Ініціалізація кнопок
@@ -704,58 +581,36 @@ document.addEventListener("DOMContentLoaded", () => {
         return;
     }
 
-    startButton.addEventListener('click', () => {
-        console.log("Start button clicked!");
+    function addButtonListeners(button, handler) {
+        button.addEventListener('click', handler);
+        button.addEventListener('touchstart', (e) => {
+            e.preventDefault();
+            handler();
+        });
+    }
+
+    addButtonListeners(startButton, () => {
         startSound.currentTime = 0;
         startSound.play().catch(console.error);
         backgroundSound.play().catch(console.error);
         startDeparture();
     });
 
-    startButton.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        console.log("Start button touched!");
-        startSound.currentTime = 0;
-        startSound.play().catch(console.error);
-        backgroundSound.play().catch(console.error);
-        startDeparture();
-    });
-
-    restartButton.addEventListener('click', () => {
-        console.log("Restart button clicked!");
+    addButtonListeners(restartButton, () => {
         startSound.currentTime = 0;
         startSound.play().catch(console.error);
         backgroundSound.play().catch(console.error);
         restartGame();
     });
 
-    restartButton.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        console.log("Restart button touched!");
+    addButtonListeners(successRestartButton, () => {
         startSound.currentTime = 0;
         startSound.play().catch(console.error);
         backgroundSound.play().catch(console.error);
         restartGame();
     });
 
-    successRestartButton.addEventListener('click', () => {
-        console.log("Success restart button clicked!");
-        startSound.currentTime = 0;
-        startSound.play().catch(console.error);
-        backgroundSound.play().catch(console.error);
-        restartGame();
-    });
-
-    successRestartButton.addEventListener('touchstart', (e) => {
-        e.preventDefault();
-        console.log("Success restart button touched!");
-        startSound.currentTime = 0;
-        startSound.play().catch(console.error);
-        backgroundSound.play().catch(console.error);
-        restartGame();
-    });
-
-    // Сенсорне керування ракетою
+    // Сенсорне керування з паралаксом
     let touchActive = false;
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
@@ -763,9 +618,10 @@ document.addEventListener("DOMContentLoaded", () => {
         const touch = e.touches[0];
         const rect = canvas.getBoundingClientRect();
         const touchX = (touch.clientX - rect.left) * (canvas.width / rect.width);
-        rocket.x = touchX - rocket.width / 2;
-        updateBackgroundOnMove(touchX);
-    });
+        const prevX = rocket.x;
+        rocket.x = Math.max(0, Math.min(touchX - rocket.width / 2, canvas.width - rocket.width));
+        updateBackgroundOnMove(rocket.x - prevX);
+    }, { passive: false });
 
     canvas.addEventListener('touchmove', (e) => {
         e.preventDefault();
@@ -773,55 +629,27 @@ document.addEventListener("DOMContentLoaded", () => {
             const touch = e.touches[0];
             const rect = canvas.getBoundingClientRect();
             const touchX = (touch.clientX - rect.left) * (canvas.width / rect.width);
-            rocket.x = touchX - rocket.width / 2;
-
-            if (rocket.x < 0) rocket.x = 0;
-            if (rocket.x > canvas.width - rocket.width) rocket.x = canvas.width - rocket.width;
-
-            updateBackgroundOnMove(touchX);
+            const prevX = rocket.x;
+            rocket.x = Math.max(0, Math.min(touchX - rocket.width / 2, canvas.width - rocket.width));
+            updateBackgroundOnMove(rocket.x - prevX);
         }
-    });
+    }, { passive: false });
 
     canvas.addEventListener('touchend', () => {
         touchActive = false;
     });
 
-    // Керування клавіатурою
+    // Керування клавіатурою з паралаксом
     window.addEventListener('keydown', (e) => {
         if (gameRunning) {
-            let prevX = rocket.x;
+            const prevX = rocket.x;
             if (e.key === 'ArrowLeft' && rocket.x > 0) rocket.x -= 20 * scaleFactor;
             if (e.key === 'ArrowRight' && rocket.x < canvas.width - rocket.width) rocket.x += 20 * scaleFactor;
-
-            let deltaX = rocket.x - prevX;
-            backgroundLayers.forEach(layer => {
-                layer.stars.forEach(star => {
-                    star.x -= deltaX * (layer.speed / 10);
-                    if (star.x < 0) star.x += canvas.width;
-                    if (star.x > canvas.width) star.x -= canvas.width;
-                });
-            });
+            updateBackgroundOnMove(rocket.x - prevX);
         }
     });
 
-    function updateBackgroundOnMove(touchX) {
-        const prevX = rocket.x;
-        rocket.x = touchX - rocket.width / 2;
-
-        if (rocket.x < 0) rocket.x = 0;
-        if (rocket.x > canvas.width - rocket.width) rocket.x = canvas.width - rocket.width;
-
-        const deltaX = rocket.x - prevX;
-        backgroundLayers.forEach(layer => {
-            layer.stars.forEach(star => {
-                star.x -= deltaX * (layer.speed / 10);
-                if (star.x < 0) star.x += canvas.width;
-                if (star.x > canvas.width) star.x -= canvas.width;
-            });
-        });
-    }
-
-    // Ініціалізація зірок та виклик resizeCanvas
+    // Ініціалізація
     initStars();
     resizeCanvas();
     window.addEventListener('resize', resizeCanvas);
